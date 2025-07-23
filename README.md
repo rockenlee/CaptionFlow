@@ -21,7 +21,7 @@
 
 ```bash
 # 克隆项目
-git clone https://github.com/your-username/CaptionFlow.git
+git clone https://github.com/rockenlee/CaptionFlow.git
 cd CaptionFlow
 
 # 安装Python依赖
