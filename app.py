@@ -10,6 +10,7 @@ import io
 
 from caption_generator import CaptionGenerator
 from translator import Translator
+from i18n import i18n
 
 # 配置页面
 # 注意：4GB文件上传支持通过启动脚本的命令行参数配置
@@ -49,66 +50,114 @@ def main():
     """主应用函数"""
     init_session_state()
     
+    # 初始化会话状态中的语言设置
+    if 'interface_language' not in st.session_state:
+        st.session_state.interface_language = 'zh_CN'
+    
+    # 设置当前语言
+    i18n.set_language(st.session_state.interface_language)
+    
+    # 页面顶部语言选择器
+    col1, col2 = st.columns([3, 1])
+    with col2:
+        available_languages = i18n.get_available_languages()
+        selected_language = st.selectbox(
+            i18n.t("app.language_selector"),
+            options=list(available_languages.keys()),
+            format_func=lambda x: available_languages[x],
+            index=list(available_languages.keys()).index(st.session_state.interface_language),
+            key="language_selector"
+        )
+        
+        if selected_language != st.session_state.interface_language:
+            st.session_state.interface_language = selected_language
+            i18n.set_language(selected_language)
+            st.rerun()
+    
     # 标题和描述
-    st.title("🎬 CaptionFlow")
-    st.markdown("### 智能视频双语字幕生成器")
-    st.markdown("自动识别视频语言，生成高质量的双语字幕文件")
+    st.title(i18n.t("app.title"))
+    st.markdown(f"### {i18n.t('app.subtitle')}")
+    st.markdown("---")
     
     # 侧边栏设置
-    st.sidebar.header("⚙️ 设置")
+    st.sidebar.header(i18n.t("sidebar.settings"))
     
     # Whisper模型选择
     model_size = st.sidebar.selectbox(
-        "Whisper模型大小",
+        i18n.t("sidebar.model_selection"),
         ["tiny", "base", "small", "medium", "large-v2"],
         index=1,
-        help="更大的模型精度更高但速度更慢"
+        help=i18n.t("sidebar.model_help")
     )
     
     # 翻译服务选择
     translator_service = st.sidebar.selectbox(
-        "翻译服务",
+        i18n.t("sidebar.translator_selection"),
         ["simple", "google", "libre", "openai"],
         index=0,
-        help="Simple本地翻译无需网络（推荐离线使用），Google翻译质量好但需网络，LibreTranslate免费云服务，OpenAI需要API密钥"
+        help=i18n.t("sidebar.translator_help")
     )
     
+    # 目标语言选择
+    language_options = {
+        "zh": i18n.t("languages.zh"),
+        "en": i18n.t("languages.en"),
+        "es": i18n.t("languages.es"),
+        "fr": i18n.t("languages.fr"),
+        "de": i18n.t("languages.de"),
+        "pt": i18n.t("languages.pt"),
+        "ru": i18n.t("languages.ru"),
+        "ja": i18n.t("languages.ja"),
+        "ar": i18n.t("languages.ar"),
+        "hi": i18n.t("languages.hi")
+    }
+    
+    target_language = st.sidebar.selectbox(
+        i18n.t("sidebar.target_language"),
+        options=list(language_options.keys()),
+        format_func=lambda x: language_options[x],
+        index=0
+    )
+
     # OpenAI API密钥输入
     api_key = None
     if translator_service == "openai":
         api_key = st.sidebar.text_input(
-            "OpenAI API密钥",
+            "OpenAI API Key",
             type="password",
-            help="使用OpenAI翻译服务需要API密钥"
+            help="Required for OpenAI translation service"
         )
         if not api_key:
-            st.sidebar.warning("⚠️ 使用OpenAI翻译需要输入API密钥")
+            st.sidebar.warning("⚠️ OpenAI API key required for OpenAI translation")
     
     # 输出选项
-    st.sidebar.header("📤 输出选项")
-    generate_bilingual = st.sidebar.checkbox("生成双语字幕", value=True)
-    only_transcribe = st.sidebar.checkbox("仅转录不翻译", value=False)
+    st.sidebar.header("📤 Output Options")
+    generate_bilingual = st.sidebar.checkbox(
+        i18n.t("sidebar.bilingual"), 
+        value=True,
+        help=i18n.t("sidebar.bilingual_help")
+    )
     
     # 主界面
     col1, col2 = st.columns([2, 1])
     
     with col1:
-        st.header("📁 上传视频文件")
+        st.header(i18n.t("app.file_upload"))
         
         uploaded_file = st.file_uploader(
-            "选择视频文件",
+            i18n.t("app.file_upload"),
             type=['mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv', 'webm', 'm4v'],
-            help="支持常见的视频格式"
+            help=i18n.t("app.file_upload_help")
         )
         
         if uploaded_file is not None:
             # 显示文件信息
-            st.success(f"✅ 已上传: {uploaded_file.name}")
+            st.success(f"✅ {i18n.t('app.success')}: {uploaded_file.name}")
             file_size = uploaded_file.size / (1024 * 1024)  # MB
-            st.info(f"📊 文件大小: {file_size:.2f} MB")
+            st.info(f"📊 File size: {file_size:.2f} MB")
             
             # 视频播放器
-            st.subheader("🎥 视频预览")
+            st.subheader("🎥 Video Preview")
             try:
                 # 创建临时文件用于预览
                 with tempfile.NamedTemporaryFile(delete=False, suffix=Path(uploaded_file.name).suffix) as preview_file:
@@ -127,13 +176,13 @@ def main():
                     pass
                     
             except Exception as e:
-                st.warning(f"⚠️ 无法预览视频: {str(e)}")
-                st.info("💡 不影响处理功能，您可以继续进行字幕生成")
+                st.warning(f"⚠️ Cannot preview video: {str(e)}")
+                st.info("💡 This doesn't affect processing functionality, you can continue with subtitle generation")
             
             # 处理按钮
-            if st.button("🚀 开始处理", type="primary"):
+            if st.button(f"🚀 {i18n.t('app.processing')}", type="primary"):
                 if translator_service == "openai" and not api_key:
-                    st.error("❌ 使用OpenAI翻译需要提供API密钥")
+                    st.error("❌ OpenAI API key required for OpenAI translation")
                     return
                 
                 # 创建临时文件
@@ -150,9 +199,9 @@ def main():
                         uploaded_file.name,
                         model_size,
                         translator_service,
+                        target_language,
                         api_key,
-                        generate_bilingual,
-                        only_transcribe
+                        generate_bilingual
                     )
                 finally:
                     # 清理临时文件
@@ -160,38 +209,40 @@ def main():
                         os.unlink(temp_video_path)
     
     with col2:
-        st.header("ℹ️ 使用说明")
+        st.header("ℹ️ Instructions")
         
-        st.markdown("""
-        **功能特点:**
-        - 🎯 自动识别视频语言
-        - 🔄 智能中英互译
-        - 📝 生成标准SRT字幕
-        - 🌍 支持双语字幕
-        - ⚡ 多种模型选择
-        - 🎥 视频预览功能
-        - 📁 支持4GB大文件
+        features_text = f"""
+        **{i18n.t("app.subtitle")}:**
+        - 🎯 Automatic video language detection
+        - 🔄 Smart multi-language translation
+        - 📝 Generate standard SRT subtitles
+        - 🌍 Support bilingual subtitles
+        - ⚡ Multiple model options
+        - 🎥 Video preview function
+        - 📁 Support 4GB large files
         
-        **支持格式:**
-        - 视频: MP4, AVI, MKV, MOV等
-        - 文件大小: 最大4GB
-        - 输出: SRT字幕文件
+        **Supported formats:**
+        - Video: MP4, AVI, MKV, MOV, etc.
+        - File size: Maximum 4GB
+        - Output: SRT subtitle files
         
-        **处理流程:**
-        1. 上传视频文件（支持4GB）
-        2. 预览视频内容
-        3. 自动提取音频
-        4. 语音识别转文字
-        5. 检测原始语言
-        6. 翻译成目标语言
-        7. 生成字幕文件
-        """)
+        **Processing flow:**
+        1. Upload video file (supports 4GB)
+        2. Preview video content
+        3. Automatically extract audio
+        4. Speech recognition to text
+        5. Detect original language
+        6. Translate to target language
+        7. Generate subtitle files
+        """
+        
+        st.markdown(features_text)
     
     # 显示处理结果
     if st.session_state.processing_complete and st.session_state.result_data:
         display_results()
 
-def process_video(video_path, video_name, model_size, translator_service, api_key, generate_bilingual, only_transcribe):
+def process_video(video_path, video_name, model_size, translator_service, target_language, api_key, generate_bilingual):
     """处理视频生成字幕"""
     
     # 创建临时输出目录
@@ -203,19 +254,19 @@ def process_video(video_path, video_name, model_size, translator_service, api_ke
     
     try:
         # 步骤1: 初始化字幕生成器
-        status_text.text("🔧 初始化语音识别模型...")
+        status_text.text(f"🔧 {i18n.t('processing.extracting_audio')}")
         progress_bar.progress(10)
         
         caption_generator = CaptionGenerator(model_size=model_size)
         
         # 步骤2: 处理视频
-        status_text.text("🎵 提取音频并进行语音识别...")
+        status_text.text(f"🎵 {i18n.t('processing.speech_recognition')}")
         progress_bar.progress(30)
         
         result = caption_generator.process_video(video_path, output_dir)
         
         if not result['success']:
-            st.error(f"❌ 视频处理失败: {result['error']}")
+            st.error(f"❌ {i18n.t('errors.processing_failed')}: {result['error']}")
             return
         
         detected_language = result['detected_language']
@@ -228,30 +279,13 @@ def process_video(video_path, video_name, model_size, translator_service, api_ke
             f"{video_basename}_{detected_language}.srt": original_srt_path
         }
         
-        # 如果只转录不翻译
-        if only_transcribe:
-            status_text.text("✅ 语音识别完成")
-            progress_bar.progress(100)
-            
-            st.session_state.result_data = {
-                'video_name': video_name,
-                'detected_language': detected_language,
-                'segments_count': len(segments),
-                'only_transcribe': True
-            }
-            st.session_state.generated_files = files_generated
-            st.session_state.processing_complete = True
-            st.rerun()
-            return
-        
         # 步骤3: 翻译
-        status_text.text("🌍 初始化翻译服务...")
+        status_text.text(f"🌍 {i18n.t('processing.translating')}")
         progress_bar.progress(60)
         
         translator = Translator(service=translator_service, api_key=api_key)
-        target_language = translator.detect_target_language(detected_language)
         
-        status_text.text(f"🔄 翻译到 {translator.get_language_name(target_language)}...")
+        status_text.text(f"🔄 {i18n.t('processing.translating')} {translator.get_language_name(target_language)}...")
         progress_bar.progress(70)
         
         translations = translator.translate_segments(
@@ -261,7 +295,7 @@ def process_video(video_path, video_name, model_size, translator_service, api_ke
         )
         
         # 步骤4: 生成翻译字幕
-        status_text.text("📝 生成翻译字幕...")
+        status_text.text(f"📝 {i18n.t('processing.generating_subtitle')}")
         progress_bar.progress(85)
         
         translated_srt = caption_generator.create_srt_subtitles(
@@ -277,7 +311,7 @@ def process_video(video_path, video_name, model_size, translator_service, api_ke
         
         # 步骤5: 生成双语字幕（如果需要）
         if generate_bilingual:
-            status_text.text("🌐 生成双语字幕...")
+            status_text.text(f"🌐 {i18n.t('processing.generating_subtitle')} (Bilingual)")
             progress_bar.progress(95)
             
             bilingual_srt = caption_generator.create_bilingual_srt(
@@ -293,7 +327,7 @@ def process_video(video_path, video_name, model_size, translator_service, api_ke
             files_generated[f"{video_basename}_bilingual.srt"] = bilingual_srt_path
         
         # 完成
-        status_text.text("✅ 处理完成!")
+        status_text.text(f"✅ {i18n.t('processing.completed')}")
         progress_bar.progress(100)
         
         # 保存结果到会话状态
@@ -304,8 +338,7 @@ def process_video(video_path, video_name, model_size, translator_service, api_ke
             'segments_count': len(segments),
             'model_used': model_size,
             'translator_used': translator_service,
-            'bilingual_generated': generate_bilingual,
-            'only_transcribe': False
+            'bilingual_generated': generate_bilingual
         }
         st.session_state.generated_files = files_generated
         st.session_state.processing_complete = True
@@ -317,14 +350,14 @@ def process_video(video_path, video_name, model_size, translator_service, api_ke
         st.rerun()
         
     except Exception as e:
-        logger.error(f"处理过程中发生错误: {e}", exc_info=True)
-        st.error(f"❌ 处理失败: {str(e)}")
+        logger.error(f"Processing error: {e}", exc_info=True)
+        st.error(f"❌ {i18n.t('errors.processing_failed')}: {str(e)}")
         progress_bar.progress(0)
         status_text.text("")
 
 def display_results():
     """显示处理结果"""
-    st.header("🎉 处理完成!")
+    st.header(f"🎉 {i18n.t('processing.completed')}")
     
     result = st.session_state.result_data
     files = st.session_state.generated_files
@@ -333,21 +366,18 @@ def display_results():
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        st.metric("视频文件", result['video_name'])
+        st.metric("Video File", result['video_name'])
     
     with col2:
-        if not result['only_transcribe']:
-            detected_lang = result['detected_language']
-            target_lang = result.get('target_language', '')
-            st.metric("语言", f"{detected_lang} → {target_lang}")
-        else:
-            st.metric("检测语言", result['detected_language'])
+        detected_lang = result['detected_language']
+        target_lang = result.get('target_language', '')
+        st.metric("Language", f"{detected_lang} → {target_lang}")
     
     with col3:
-        st.metric("字幕段落", f"{result['segments_count']} 段")
+        st.metric("Subtitle Segments", f"{result['segments_count']} segments")
     
     # 显示生成的文件
-    st.subheader("📄 生成的文件")
+    st.subheader("📄 Generated Files")
     
     for filename, filepath in files.items():
         if os.path.exists(filepath):
@@ -359,7 +389,7 @@ def display_results():
                 st.text(f"📝 {filename}")
             with col2:
                 st.download_button(
-                    label="下载",
+                    label=i18n.t("app.download"),
                     data=content,
                     file_name=filename,
                     mime="text/plain",
@@ -368,11 +398,11 @@ def display_results():
     
     # 批量下载
     if len(files) > 1:
-        st.subheader("📦 批量下载")
+        st.subheader("📦 Batch Download")
         zip_data = create_download_zip(files)
         
         st.download_button(
-            label="📦 下载所有字幕文件 (ZIP)",
+            label="📦 Download All Subtitle Files (ZIP)",
             data=zip_data,
             file_name=f"{os.path.splitext(result['video_name'])[0]}_subtitles.zip",
             mime="application/zip"

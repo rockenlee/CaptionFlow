@@ -122,6 +122,37 @@ def test_dependencies():
     
     return all_good
 
+def test_i18n():
+    """测试国际化功能"""
+    print("\n🌐 测试国际化功能...")
+    
+    try:
+        from i18n import i18n
+        
+        # 测试可用语言数量
+        languages = i18n.get_available_languages()
+        print(f"✅ 支持 {len(languages)} 种界面语言")
+        
+        # 测试几种语言的翻译
+        test_languages = ["zh_CN", "en_US", "es_ES", "ja_JP"]
+        for lang_code in test_languages:
+            i18n.set_language(lang_code)
+            title = i18n.t("app.title")
+            print(f"  ✅ {languages[lang_code]}: {title[:40]}...")
+        
+        # 测试翻译键不存在的情况
+        missing_key = i18n.t("non.existent.key")
+        print(f"✅ 缺失键处理正常: {missing_key}")
+        
+        return True
+        
+    except ImportError:
+        print("❌ 国际化模块导入失败")
+        return False
+    except Exception as e:
+        print(f"❌ 国际化测试失败: {e}")
+        return False
+
 def main():
     """主测试函数"""
     print("🎬 CaptionFlow 功能测试")
@@ -132,6 +163,7 @@ def main():
         ("关键依赖", test_dependencies),
         ("Whisper模型", test_whisper_model),
         ("翻译器", test_translator),
+        ("国际化", test_i18n),
     ]
     
     results = []
