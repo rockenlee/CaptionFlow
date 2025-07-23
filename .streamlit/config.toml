@@ -1,0 +1,10 @@
+[server]
+# 配置文件上传大小限制为4GB (4096MB)
+# 注意：此配置通过启动脚本的命令行参数设置
+# 命令：streamlit run app.py --server.maxUploadSize 4096
+maxUploadSize = 4096
+
+# 其他服务器配置
+port = 8502
+headless = true
+enableCORS = false 

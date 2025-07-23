@@ -1,0 +1,12 @@
+faster-whisper
+openai>=1.0.0
+moviepy==1.0.3
+srt
+langdetect
+pysrt
+ffmpeg-python
+python-dotenv
+streamlit>=1.28.0
+requests
+deep-translator
+translate>=3.6.1 
