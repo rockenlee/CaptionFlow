@@ -220,11 +220,15 @@ class OptimizedTranslator:
     def _translate_google(self, text: str, target_language: str, source_language: str = "") -> str:
         """Google翻译"""
         try:
-            translator = GoogleTranslator(source='auto', target=target_language)
+            # 标准化语言代码
+            google_target = self._normalize_language_code_for_google(target_language)
+            google_source = self._normalize_language_code_for_google(source_language) if source_language else 'auto'
+            
+            translator = GoogleTranslator(source=google_source, target=google_target)
             result = translator.translate(text)
             return result if result else text
         except Exception as e:
-            logger.error(f"Google翻译失败: {e}")
+            logger.error(f"Google翻译失败: {text[:50]}... --> {e}")
             return self._translate_simple(text, target_language, source_language)
     
     def _translate_libre(self, text: str, target_language: str, source_language: str = "") -> str:
@@ -348,6 +352,34 @@ class OptimizedTranslator:
             'fr': '法文', 'de': '德文', 'es': '西班牙文', 'ru': '俄文'
         }
         return language_map.get(language_code, language_code)
+    
+    def _normalize_language_code_for_google(self, language_code: str) -> str:
+        """为Google翻译标准化语言代码"""
+        if not language_code:
+            return 'auto'
+        
+        # Google翻译需要的标准语言代码
+        google_lang_map = {
+            'zh': 'zh-CN',
+            'chinese': 'zh-CN',
+            'en': 'en', 
+            'english': 'en',
+            'ja': 'ja',
+            'japanese': 'ja', 
+            'ko': 'ko',
+            'korean': 'ko',
+            'fr': 'fr',
+            'french': 'fr',
+            'de': 'de', 
+            'german': 'de',
+            'es': 'es',
+            'spanish': 'es',
+            'ru': 'ru',
+            'russian': 'ru'
+        }
+        
+        # 直接返回映射后的语言代码，如果没有映射则返回原值
+        return google_lang_map.get(language_code.lower(), language_code)
     
     def _translate_by_patterns(self, text: str, target_language: str) -> str:
         """
