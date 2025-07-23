@@ -538,10 +538,10 @@ def display_results():
         )
     
     # 预览字幕内容
-    st.subheader("👀 字幕预览")
+    st.subheader(f"👀 {i18n.t('preview.subtitle_preview')}")
     
     selected_file = st.selectbox(
-        "选择要预览的字幕文件",
+        i18n.t('preview.select_file'),
         list(files.keys())
     )
     
@@ -558,10 +558,10 @@ def display_results():
             st.code('\n'.join(preview_lines), language='srt')
             
             if len(lines) > 50:
-                st.info(f"📄 显示前50行，总共{len(lines)}行")
+                st.info(f"📄 {i18n.t('preview.showing_lines', total=len(lines))}")
     
     # 重新处理按钮
-    if st.button("🔄 处理新视频"):
+    if st.button(f"🔄 {i18n.t('preview.new_video')}"):
         st.session_state.processing_complete = False
         st.session_state.processing_status = 'ready'
         st.session_state.result_data = None
@@ -571,17 +571,26 @@ def display_results():
 # 侧边栏信息
 with st.sidebar:
     st.markdown("---")
-    st.markdown("### 📖 关于")
-    st.markdown("""
-    **CaptionFlow** 是一个智能的视频字幕生成工具，使用最新的AI技术为视频自动生成高质量的双语字幕。
+    st.markdown(f"### 📖 {i18n.t('sidebar.about')}")
     
-    **技术栈:**
-    - 🎵 Faster-Whisper (语音识别)
-    - 🌍 Google / Simple / LibreTranslate / OpenAI (翻译)
-    - 📝 SRT (字幕格式)
+    description = i18n.t('sidebar.description')
+    tech_stack = i18n.t('sidebar.tech_stack')
+    tech_speech = i18n.t('sidebar.tech_speech')
+    tech_translation = i18n.t('sidebar.tech_translation')
+    tech_format = i18n.t('sidebar.tech_format')
+    open_source = i18n.t('sidebar.open_source')
+    github_link = i18n.t('sidebar.github_link')
     
-    **开源项目:** 
-    GitHub: CaptionFlow
+    st.markdown(f"""
+    {description}
+    
+    **{tech_stack}**
+    - 🎵 {tech_speech}
+    - 🌍 {tech_translation}
+    - 📝 {tech_format}
+    
+    **{open_source}** 
+    {github_link}
     """)
 
 if __name__ == "__main__":

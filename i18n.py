@@ -193,6 +193,22 @@ class I18n:
                 "processing_failed": "处理失败",
                 "translation_failed": "翻译失败",
                 "model_load_failed": "模型加载失败"
+            },
+            "sidebar": {
+                "about": "关于",
+                "description": "**CaptionFlow** 是一个智能的视频字幕生成工具，使用最新的AI技术为视频自动生成高质量的双语字幕。",
+                "tech_stack": "技术栈:",
+                "tech_speech": "Faster-Whisper (语音识别)",
+                "tech_translation": "Google / Simple / LibreTranslate / OpenAI (翻译)",
+                "tech_format": "SRT (字幕格式)",
+                "open_source": "开源项目:",
+                "github_link": "GitHub: CaptionFlow"
+            },
+            "preview": {
+                "subtitle_preview": "字幕预览",
+                "select_file": "选择要预览的字幕文件",
+                "showing_lines": "显示前50行，总共{total}行",
+                "new_video": "处理新视频"
             }
         }
     
@@ -258,6 +274,22 @@ class I18n:
                 "processing_failed": "Processing failed",
                 "translation_failed": "Translation failed",
                 "model_load_failed": "Model loading failed"
+            },
+            "sidebar": {
+                "about": "About",
+                "description": "**CaptionFlow** is an intelligent video subtitle generation tool that uses the latest AI technology to automatically generate high-quality bilingual subtitles for videos.",
+                "tech_stack": "Tech Stack:",
+                "tech_speech": "Faster-Whisper (Speech Recognition)",
+                "tech_translation": "Google / Simple / LibreTranslate / OpenAI (Translation)",
+                "tech_format": "SRT (Subtitle Format)",
+                "open_source": "Open Source Project:",
+                "github_link": "GitHub: CaptionFlow"
+            },
+            "preview": {
+                "subtitle_preview": "Subtitle Preview",
+                "select_file": "Select subtitle file to preview",
+                "showing_lines": "Showing first 50 lines, total {total} lines",
+                "new_video": "Process New Video"
             }
         }
     
