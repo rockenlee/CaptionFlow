@@ -141,6 +141,9 @@ class I18n:
                 "file_upload": "📁 上传视频/音频文件",
                 "file_upload_help": "支持MP4、AVI、MOV、MP3、WAV等格式，最大4GB",
                 "processing": "正在处理中...",
+                "start_processing": "开始处理",
+                "processing_button": "正在处理中...",
+                "completed_button": "已完成",
                 "success": "处理完成！",
                 "error": "处理出错",
                 "download": "下载"
@@ -203,6 +206,9 @@ class I18n:
                 "file_upload": "📁 Upload Video/Audio File",
                 "file_upload_help": "Supports MP4, AVI, MOV, MP3, WAV formats, max 4GB",
                 "processing": "Processing...",
+                "start_processing": "Start Processing",
+                "processing_button": "Processing...",
+                "completed_button": "Completed",
                 "success": "Processing completed!",
                 "error": "Processing error",
                 "download": "Download"

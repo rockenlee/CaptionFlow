@@ -577,7 +577,7 @@ class Translator:
     
     def translate_text_simple(self, text: str, target_language: str, source_language: str = "") -> str:
         """
-        使用简单翻译（本地词典+基本规则+translate库）
+        使用纯本地简单翻译（仅使用本地词典和规则，完全离线）
         
         Args:
             text: 要翻译的文本
@@ -597,20 +597,15 @@ class Translator:
         if text_lower in self.simple_dict:
             return self.simple_dict[text_lower]
         
-        # 2. 如果可用，尝试使用translate库
-        if TRANSLATE_LIB_AVAILABLE and target_language == 'zh':
-            try:
-                # 使用translate库进行翻译
-                translator = TranslateLibTranslator(to_lang="zh-cn", from_lang="en")
-                result = translator.translate(text_clean)
-                if result and result != text_clean:
-                    return result
-            except Exception as e:
-                logger.debug(f"translate库翻译失败: {e}")
+        # 2. 查找常见句型模式（本地规则）
+        translated_sentence = self._translate_by_patterns(text_clean, target_language)
+        if translated_sentence != text_clean:
+            return translated_sentence
         
         # 3. 单词级别翻译（处理句子）
         words = text_clean.split()
         translated_words = []
+        has_translation = False
         
         for word in words:
             # 移除标点符号进行查找
@@ -618,30 +613,77 @@ class Translator:
             if clean_word in self.simple_dict:
                 # 保持原始的大小写和标点
                 translated = self.simple_dict[clean_word]
-                # 如果原词是大写开头，保持翻译也大写开头（针对句子开头）
-                if word and word[0].isupper() and translated:
-                    pass  # 中文无大小写，保持原样
-                translated_words.append(translated)
+                # 保留原始标点符号
+                punctuation = ''.join(c for c in word if c in '.,!?;:"()[]{}')
+                translated_words.append(translated + punctuation)
+                has_translation = True
             else:
-                # 未找到翻译的词保持原样
                 translated_words.append(word)
         
-        # 4. 如果大部分词都被翻译了，返回翻译结果
-        original_word_count = len(words)
-        translated_count = sum(1 for i, word in enumerate(words) 
-                              if translated_words[i] != word)
+        if has_translation:
+            return " ".join(translated_words)
         
-        if translated_count > 0:
-            # 至少有一些词被翻译了，返回混合结果
-            return ' '.join(translated_words)
-        
-        # 5. 最后的备用方案：使用更友好的标记
-        if target_language == 'zh' and source_language.startswith('en'):
-            return f"{text_clean}"  # 保持原文，让用户知道这是英文原文
-        elif target_language == 'en' and source_language.startswith('zh'):
-            return f"{text_clean}"  # 保持原文，让用户知道这是中文原文
+        # 4. 如果没有匹配，使用模式标记（完全本地）
+        if target_language in ['zh', 'zh-CN']:
+            return f"[中文] {text_clean}"
+        elif target_language == 'en':
+            return f"[English] {text_clean}"
         else:
-            return text_clean
+            return f"[{target_language}] {text_clean}"
+    
+    def _translate_by_patterns(self, text: str, target_language: str) -> str:
+        """
+        使用本地模式规则翻译常见句型
+        """
+        if target_language not in ['zh', 'zh-CN']:
+            return text
+        
+        text_lower = text.lower().strip()
+        
+        # 常见句型模式（完全本地规则）
+        patterns = {
+            # 问候语
+            'how are you': '你好吗',
+            'how are you?': '你好吗？',
+            'how do you do': '你好',
+            'nice to meet you': '很高兴见到你',
+            'good morning': '早上好',
+            'good afternoon': '下午好',
+            'good evening': '晚上好',
+            'good night': '晚安',
+            
+            # 感谢和道歉
+            'thank you very much': '非常感谢',
+            'thanks a lot': '非常感谢',
+            'i am sorry': '对不起',
+            'excuse me': '打扰一下',
+            'you are welcome': '不客气',
+            
+            # 常见表达
+            'i love you': '我爱你',
+            'i miss you': '我想你',
+            'see you later': '再见',
+            'see you soon': '再见',
+            'take care': '保重',
+            'have a good day': '祝你今天愉快',
+            'have a nice day': '祝你今天愉快',
+            
+            # 疑问句
+            'what is your name': '你叫什么名字',
+            'what is your name?': '你叫什么名字？',
+            'how old are you': '你多大了',
+            'how old are you?': '你多大了？',
+            'where are you from': '你来自哪里',
+            'where are you from?': '你来自哪里？',
+            
+            # 常见动作
+            'i want to go': '我想去',
+            'i need help': '我需要帮助',
+            'can you help me': '你能帮助我吗',
+            'can you help me?': '你能帮助我吗？',
+        }
+        
+        return patterns.get(text_lower, text)
     
     def translate_text(self, text: str, target_language: str = None, source_language: str = "") -> str:
         """

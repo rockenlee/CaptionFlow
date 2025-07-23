@@ -30,6 +30,8 @@ def init_session_state():
     """初始化会话状态"""
     if 'processing_complete' not in st.session_state:
         st.session_state.processing_complete = False
+    if 'processing_status' not in st.session_state:
+        st.session_state.processing_status = 'ready'  # ready, processing, completed, error
     if 'result_data' not in st.session_state:
         st.session_state.result_data = None
     if 'generated_files' not in st.session_state:
@@ -197,11 +199,78 @@ def main():
                 st.warning(f"⚠️ Cannot preview video: {str(e)}")
                 st.info("💡 This doesn't affect processing functionality, you can continue with subtitle generation")
             
-            # 处理按钮
-            if st.button(f"🚀 {i18n.t('app.processing')}", type="primary"):
+            # 处理按钮 - 根据状态显示不同样式
+            if st.session_state.processing_status == 'ready':
+                button_text = f"🚀 {i18n.t('app.start_processing')}"
+                button_type = "primary"
+                button_disabled = False
+                # 绿色按钮样式
+                st.markdown("""
+                <style>
+                .stButton[data-testid="stBaseButton-primary"] button {
+                    background-color: #28a745 !important;
+                    border-color: #28a745 !important;
+                    color: white !important;
+                }
+                </style>
+                """, unsafe_allow_html=True)
+            elif st.session_state.processing_status == 'processing':
+                button_text = f"⏳ {i18n.t('app.processing_button')}"
+                button_type = "secondary"
+                button_disabled = True
+                # 红色按钮样式（处理中）
+                st.markdown("""
+                <style>
+                .stButton[data-testid="stBaseButton-secondary"] button {
+                    background-color: #dc3545 !important;
+                    border-color: #dc3545 !important;
+                    color: white !important;
+                }
+                </style>
+                """, unsafe_allow_html=True)
+            elif st.session_state.processing_status == 'completed':
+                button_text = f"✅ {i18n.t('app.completed_button')}"
+                button_type = "primary"
+                button_disabled = False
+                # 绿色按钮样式（已完成）
+                st.markdown("""
+                <style>
+                .stButton[data-testid="stBaseButton-primary"] button {
+                    background-color: #28a745 !important;
+                    border-color: #28a745 !important;
+                    color: white !important;
+                }
+                </style>
+                """, unsafe_allow_html=True)
+            else:  # error
+                button_text = f"❌ 重试处理"
+                button_type = "secondary"
+                button_disabled = False
+                # 橙色按钮样式（错误状态）
+                st.markdown("""
+                <style>
+                .stButton[data-testid="stBaseButton-secondary"] button {
+                    background-color: #ffc107 !important;
+                    border-color: #ffc107 !important;
+                    color: black !important;
+                }
+                </style>
+                """, unsafe_allow_html=True)
+            
+            # 显示按钮
+            if st.button(button_text, type=button_type, disabled=button_disabled):
                 if translator_service == "openai" and not api_key:
                     st.error("❌ OpenAI API key required for OpenAI translation")
                     return
+                
+                # 如果已完成，清除之前的结果重新开始
+                if st.session_state.processing_status == 'completed':
+                    st.session_state.processing_complete = False
+                    st.session_state.result_data = None
+                    st.session_state.generated_files = {}
+                
+                # 设置处理状态
+                st.session_state.processing_status = 'processing'
                 
                 # 创建临时文件
                 with tempfile.NamedTemporaryFile(delete=False, suffix=Path(uploaded_file.name).suffix) as tmp_file:
@@ -382,6 +451,7 @@ def process_video(video_path, video_name, model_size, translator_service, target
         st.session_state.result_data = result_data
         st.session_state.generated_files = files_generated
         st.session_state.processing_complete = True
+        st.session_state.processing_status = 'completed'
         
         # 清理资源
         caption_generator.cleanup()
@@ -392,6 +462,7 @@ def process_video(video_path, video_name, model_size, translator_service, target
     except Exception as e:
         logger.error(f"Processing error: {e}", exc_info=True)
         st.error(f"❌ {i18n.t('errors.processing_failed')}: {str(e)}")
+        st.session_state.processing_status = 'error'
         progress_bar.progress(0)
         status_text.text("")
 
@@ -492,6 +563,7 @@ def display_results():
     # 重新处理按钮
     if st.button("🔄 处理新视频"):
         st.session_state.processing_complete = False
+        st.session_state.processing_status = 'ready'
         st.session_state.result_data = None
         st.session_state.generated_files = {}
         st.rerun()

@@ -187,15 +187,10 @@ class OptimizedTranslator:
         if text_lower in self.simple_dict:
             return self.simple_dict[text_lower]
         
-        # 2. 使用translate库（如果可用且目标是中文）
-        if TRANSLATE_LIB_AVAILABLE and target_language in ['zh', 'zh-CN']:
-            try:
-                translator = TranslateLibTranslator(to_lang="zh-cn", from_lang="en")
-                result = translator.translate(text_clean)
-                if result and result != text_clean and len(result) > 0:
-                    return result
-            except Exception:
-                pass  # 忽略错误，继续其他方法
+        # 2. 查找常见句型模式（本地规则）
+        translated_sentence = self._translate_by_patterns(text_clean, target_language)
+        if translated_sentence != text_clean:
+            return translated_sentence
         
         # 3. 单词级翻译（快速版本）
         words = text_clean.split()
@@ -353,6 +348,50 @@ class OptimizedTranslator:
             'fr': '法文', 'de': '德文', 'es': '西班牙文', 'ru': '俄文'
         }
         return language_map.get(language_code, language_code)
+    
+    def _translate_by_patterns(self, text: str, target_language: str) -> str:
+        """
+        使用本地模式规则翻译常见句型
+        """
+        if target_language not in ['zh', 'zh-CN']:
+            return text
+        
+        text_lower = text.lower().strip()
+        
+        # 常见句型模式（完全本地规则）
+        patterns = {
+            # 问候语
+            'how are you': '你好吗',
+            'how are you?': '你好吗？',
+            'good morning': '早上好',
+            'good afternoon': '下午好',
+            'good evening': '晚上好',
+            'good night': '晚安',
+            'nice to meet you': '很高兴见到你',
+            
+            # 感谢和道歉
+            'thank you very much': '非常感谢',
+            'thanks a lot': '非常感谢',
+            'i am sorry': '对不起',
+            'excuse me': '打扰一下',
+            'you are welcome': '不客气',
+            
+            # 常见表达
+            'i love you': '我爱你',
+            'see you later': '再见',
+            'have a good day': '祝你今天愉快',
+            'have a nice day': '祝你今天愉快',
+            
+            # 疑问句
+            'what is your name': '你叫什么名字',
+            'what is your name?': '你叫什么名字？',
+            'how old are you': '你多大了',
+            'how old are you?': '你多大了？',
+            'where are you from': '你来自哪里',
+            'where are you from?': '你来自哪里？',
+        }
+        
+        return patterns.get(text_lower, text)
     
     def clear_cache(self):
         """清空翻译缓存"""
