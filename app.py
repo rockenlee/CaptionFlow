@@ -10,6 +10,7 @@ import io
 
 from caption_generator import CaptionGenerator
 from translator import Translator
+from translator_optimized import OptimizedTranslator
 from i18n import i18n
 
 # 配置页面
@@ -97,6 +98,23 @@ def main():
         index=0,
         help=i18n.t("sidebar.translator_help")
     )
+    
+    # 性能优化选项
+    st.sidebar.header("⚡ Performance Options")
+    use_optimized = st.sidebar.checkbox(
+        "启用高性能翻译",
+        value=True,
+        help="使用并行处理、缓存和批量翻译等优化技术，大幅提升翻译速度"
+    )
+    
+    if use_optimized:
+        max_workers = st.sidebar.slider(
+            "并行线程数",
+            min_value=1,
+            max_value=20,
+            value=10,
+            help="并行翻译的线程数，越多速度越快但消耗更多资源"
+        )
     
     # 目标语言选择
     language_options = {
@@ -201,7 +219,9 @@ def main():
                         translator_service,
                         target_language,
                         api_key,
-                        generate_bilingual
+                        generate_bilingual,
+                        use_optimized,
+                        max_workers if use_optimized else 1
                     )
                 finally:
                     # 清理临时文件
@@ -242,7 +262,7 @@ def main():
     if st.session_state.processing_complete and st.session_state.result_data:
         display_results()
 
-def process_video(video_path, video_name, model_size, translator_service, target_language, api_key, generate_bilingual):
+def process_video(video_path, video_name, model_size, translator_service, target_language, api_key, generate_bilingual, use_optimized=True, max_workers=10):
     """处理视频生成字幕"""
     
     # 创建临时输出目录
@@ -283,16 +303,29 @@ def process_video(video_path, video_name, model_size, translator_service, target
         status_text.text(f"🌍 {i18n.t('processing.translating')}")
         progress_bar.progress(60)
         
-        translator = Translator(service=translator_service, api_key=api_key)
+        # 选择翻译器类型
+        if use_optimized:
+            translator = OptimizedTranslator(service=translator_service, api_key=api_key, max_workers=max_workers)
+            status_text.text(f"⚡ 高性能翻译至 {translator.get_language_name(target_language)}...")
+        else:
+            translator = Translator(service=translator_service, api_key=api_key)
+            status_text.text(f"🔄 {i18n.t('processing.translating')} {translator.get_language_name(target_language)}...")
         
-        status_text.text(f"🔄 {i18n.t('processing.translating')} {translator.get_language_name(target_language)}...")
         progress_bar.progress(70)
         
-        translations = translator.translate_segments(
-            segments,
-            target_language=target_language,
-            source_language=detected_language
-        )
+        # 使用相应的翻译方法
+        if use_optimized:
+            translations = translator.translate_segments_optimized(
+                segments,
+                target_language=target_language,
+                source_language=detected_language
+            )
+        else:
+            translations = translator.translate_segments(
+                segments,
+                target_language=target_language,
+                source_language=detected_language
+            )
         
         # 步骤4: 生成翻译字幕
         status_text.text(f"📝 {i18n.t('processing.generating_subtitle')}")
@@ -331,15 +364,22 @@ def process_video(video_path, video_name, model_size, translator_service, target
         progress_bar.progress(100)
         
         # 保存结果到会话状态
-        st.session_state.result_data = {
+        result_data = {
             'video_name': video_name,
             'detected_language': detected_language,
             'target_language': target_language,
             'segments_count': len(segments),
             'model_used': model_size,
             'translator_used': translator_service,
-            'bilingual_generated': generate_bilingual
+            'bilingual_generated': generate_bilingual,
+            'optimized_translation': use_optimized
         }
+        
+        # 添加性能统计（如果使用优化版翻译器）
+        if use_optimized and hasattr(translator, 'get_performance_stats'):
+            result_data['performance_stats'] = translator.get_performance_stats()
+        
+        st.session_state.result_data = result_data
         st.session_state.generated_files = files_generated
         st.session_state.processing_complete = True
         
@@ -375,6 +415,24 @@ def display_results():
     
     with col3:
         st.metric("Subtitle Segments", f"{result['segments_count']} segments")
+    
+    # 显示性能统计（如果使用了优化翻译）
+    if result.get('optimized_translation') and 'performance_stats' in result:
+        st.subheader("⚡ Performance Statistics")
+        stats = result['performance_stats']
+        
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Total Requests", stats['total_requests'])
+        with col2:
+            st.metric("Cache Hits", stats['cache_hits'])
+        with col3:
+            st.metric("Cache Hit Rate", stats['cache_hit_rate'])
+        with col4:
+            st.metric("Cache Size", stats['cache_size'])
+        
+        if stats['cache_hit_rate'] != '0.0%':
+            st.success(f"🚀 缓存优化生效！命中率: {stats['cache_hit_rate']}")
     
     # 显示生成的文件
     st.subheader("📄 Generated Files")

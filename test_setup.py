@@ -97,6 +97,51 @@ def test_translator():
         print(f"❌ 翻译器测试失败: {e}")
         return False
 
+def test_optimized_translator():
+    """测试优化版翻译器"""
+    print("\n⚡ 测试优化版翻译器...")
+    
+    try:
+        from translator_optimized import OptimizedTranslator
+        
+        # 测试优化版Simple翻译器
+        optimized_translator = OptimizedTranslator(service="simple", max_workers=5)
+        
+        # 创建少量测试段落
+        test_segments = [
+            {'start': 0, 'end': 2, 'text': 'Hello world'},
+            {'start': 2, 'end': 4, 'text': 'Thank you'},
+            {'start': 4, 'end': 6, 'text': 'Good morning'},
+            {'start': 6, 'end': 8, 'text': 'Have a nice day'},
+            {'start': 8, 'end': 10, 'text': 'See you later'}
+        ]
+        
+        # 测试并行翻译
+        import time
+        start_time = time.time()
+        translations = optimized_translator.translate_segments_optimized(
+            test_segments, target_language='zh', source_language='en'
+        )
+        elapsed_time = time.time() - start_time
+        
+        print(f"✅ 优化版翻译器工作正常")
+        print(f"  处理了 {len(test_segments)} 个段落")
+        print(f"  耗时: {elapsed_time:.3f}秒")
+        print(f"  速度: {len(test_segments)/elapsed_time:.1f}段/秒")
+        
+        # 测试性能统计
+        stats = optimized_translator.get_performance_stats()
+        print(f"  缓存命中率: {stats['cache_hit_rate']}")
+        
+        return True
+        
+    except ImportError:
+        print("❌ 优化版翻译器模块导入失败")
+        return False
+    except Exception as e:
+        print(f"❌ 优化版翻译器测试失败: {e}")
+        return False
+
 def test_dependencies():
     """测试关键依赖"""
     print("\n📦 测试关键依赖...")
@@ -163,6 +208,7 @@ def main():
         ("关键依赖", test_dependencies),
         ("Whisper模型", test_whisper_model),
         ("翻译器", test_translator),
+        ("优化版翻译器", test_optimized_translator),
         ("国际化", test_i18n),
     ]
     
