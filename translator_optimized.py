@@ -179,7 +179,27 @@ class OptimizedTranslator:
             return text
     
     def _translate_simple(self, text: str, target_language: str, source_language: str = "") -> str:
-        """Simple翻译 - 优化版本"""
+        """增强Simple翻译 - Microsoft Translator API + 本地缓存优化"""
+        try:
+            # 1. 初始化增强翻译器（懒加载 + 缓存）
+            if not hasattr(self, '_enhanced_translator'):
+                from translator_enhanced import MicrosoftTranslatorEnhanced
+                self._enhanced_translator = MicrosoftTranslatorEnhanced(max_workers=self.max_workers)
+                logger.info("Microsoft Translator增强版翻译器已加载（优化版）")
+            
+            # 2. 使用增强版翻译器
+            result = self._enhanced_translator.translate_text(text, target_language, source_language)
+            return result
+            
+        except ImportError:
+            logger.warning("无法导入增强翻译器，使用本地优化回退方案")
+            return self._translate_simple_optimized_fallback(text, target_language, source_language)
+        except Exception as e:
+            logger.error(f"增强Simple翻译失败: {e}，使用本地优化回退方案")
+            return self._translate_simple_optimized_fallback(text, target_language, source_language)
+    
+    def _translate_simple_optimized_fallback(self, text: str, target_language: str, source_language: str = "") -> str:
+        """本地优化回退翻译（完全离线，性能优化）"""
         text_clean = text.strip()
         text_lower = text_clean.lower()
         
@@ -211,9 +231,9 @@ class OptimizedTranslator:
         
         # 4. 使用模式翻译（改进版）
         if target_language in ['zh', 'zh-CN']:
-            return f"[中译] {text_clean}"
+            return f"[优化中译] {text_clean}"
         elif target_language == 'en':
-            return f"[英译] {text_clean}"
+            return f"[Opt EN] {text_clean}"
         else:
             return f"[{target_language}] {text_clean}"
     

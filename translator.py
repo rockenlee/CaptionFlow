@@ -577,7 +577,8 @@ class Translator:
     
     def translate_text_simple(self, text: str, target_language: str, source_language: str = "") -> str:
         """
-        使用纯本地简单翻译（仅使用本地词典和规则，完全离线）
+        增强Simple翻译（Microsoft Translator API + 本地词典备用）
+        免费配额：200万字符/月
         
         Args:
             text: 要翻译的文本
@@ -589,7 +590,36 @@ class Translator:
         """
         if not text.strip():
             return text
+        
+        try:
+            # 1. 初始化增强翻译器（懒加载）
+            if not hasattr(self, '_enhanced_translator'):
+                from translator_enhanced import MicrosoftTranslatorEnhanced
+                self._enhanced_translator = MicrosoftTranslatorEnhanced()
+                logger.info("Microsoft Translator增强版翻译器已加载")
             
+            # 2. 使用增强版翻译器
+            result = self._enhanced_translator.translate_text(text, target_language, source_language)
+            
+            # 3. 记录翻译统计（如果可用）
+            if hasattr(self._enhanced_translator, 'get_performance_stats'):
+                stats = self._enhanced_translator.get_performance_stats()
+                if stats['total_translations'] % 50 == 0:  # 每50次翻译记录一次统计
+                    logger.info(f"翻译统计: {stats}")
+            
+            return result
+            
+        except ImportError:
+            logger.warning("无法导入增强翻译器，使用本地回退方案")
+            return self._translate_text_simple_fallback(text, target_language, source_language)
+        except Exception as e:
+            logger.error(f"增强Simple翻译失败: {e}，使用本地回退方案")
+            return self._translate_text_simple_fallback(text, target_language, source_language)
+    
+    def _translate_text_simple_fallback(self, text: str, target_language: str, source_language: str = "") -> str:
+        """
+        本地回退翻译（完全离线，无API调用）
+        """
         text_clean = text.strip()
         text_lower = text_clean.lower()
         
@@ -625,9 +655,9 @@ class Translator:
         
         # 4. 如果没有匹配，使用模式标记（完全本地）
         if target_language in ['zh', 'zh-CN']:
-            return f"[中文] {text_clean}"
+            return f"[本地中译] {text_clean}"
         elif target_language == 'en':
-            return f"[English] {text_clean}"
+            return f"[Local EN] {text_clean}"
         else:
             return f"[{target_language}] {text_clean}"
     
